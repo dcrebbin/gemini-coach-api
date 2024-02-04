@@ -46,7 +46,6 @@ func main() {
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-API-KEY",
 	}))
 
-	initDatabase()
 	assignRoutes(app, store)
 
 	appListeningError := app.Listen("0.0.0.0:8080")
