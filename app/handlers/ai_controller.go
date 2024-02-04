@@ -57,7 +57,7 @@ func (h *AiHandler) GenerateChunkedAudio(ctx *fiber.Ctx) (err error) {
 
 		for i := 0; i < len(chunkedMessage); i++ {
 			go func(index int) {
-				var audio []byte = h.aiService.VertexAiGenerateAudio(chunkedMessage[index])
+				var audio []byte = h.aiService.VertexAiTextToSpeech(chunkedMessage[index])
 				_, err := w.Write(audio)
 				if err != nil {
 					doneCh <- false
@@ -74,7 +74,7 @@ func (h *AiHandler) GenerateChunkedAudio(ctx *fiber.Ctx) (err error) {
 				doneCh <- true
 			}(i)
 
-			if !<-doneCh { // wait for the goroutine to signal completion
+			if !<-doneCh {
 				return
 			}
 		}

@@ -23,10 +23,10 @@ type AiService struct {
 }
 
 func (s *AiService) AiCreateMessage(c *fiber.Ctx, ai *ai_model.MessageReceived) (err error) {
-	return VertexAiCreateMessage(c, ai, "gemini-pro", "User")
+	return VertexAiGenerateMessage(c, ai, "gemini-pro", "User")
 }
 
-func VertexAiCreateMessage(c *fiber.Ctx, ai *ai_model.MessageReceived, llmModel string, role string) (err error) {
+func VertexAiGenerateMessage(c *fiber.Ctx, ai *ai_model.MessageReceived, llmModel string, role string) (err error) {
 	jsonBody := ai_model.GoogleRequest{
 		Contents: []ai_model.GoogleRequestContent{
 			{
@@ -92,7 +92,7 @@ func TransformGoogleData(responseReceived ai_model.GoogleResponse) ai_model.Resp
 	}
 }
 
-func (s *AiService) VertexAiGenerateAudio(message []byte) (output []byte) {
+func (s *AiService) VertexAiTextToSpeech(message []byte) (output []byte) {
 	url := fmt.Sprintf("https://texttospeech.googleapis.com/v1/text:synthesize")
 	agent := fiber.Post(url)
 	apiKey := os.Getenv("GCLOUD_API_KEY")
