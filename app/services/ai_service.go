@@ -149,7 +149,7 @@ func (s *AiService) Chunking(input string) (output [][]byte) {
 	return output
 }
 
-func (s *AiService) VertexAiCreateTranscription(c *fiber.Ctx) (err error) {
+func (s *AiService) VertexAiSpeechToText(c *fiber.Ctx) (err error) {
 	url := fmt.Sprintf(VertexTranscriptionEndpoint)
 	agent := fiber.Post(url)
 	apiKey := os.Getenv("GCLOUD_API_KEY")

@@ -77,7 +77,7 @@ type GoogleVertexAiSpeechToTextRequestConfig struct {
 	LanguageCode          string `json:"languageCode"`
 	EnableWordTimeOffsets bool   `json:"enableWordTimeOffsets"`
 	EnableWordConfidence  bool   `json:"enableWordConfidence"`
-	Model                 string `json:"ai_model"`
+	Model                 string `json:"model"`
 	Encoding              string `json:"encoding"`
 	SampleRateHertz       int    `json:"sampleRateHertz"`
 	AudioChannelCount     int    `json:"audioChannelCount"`

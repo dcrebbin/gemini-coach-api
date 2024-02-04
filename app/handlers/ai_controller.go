@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"bufio"
 	ai_model "gemini-coach-api/app/models/ai"
 	service "gemini-coach-api/app/services"
 	"log"
@@ -49,40 +48,51 @@ func (h *AiHandler) GenerateChunkedAudio(ctx *fiber.Ctx) (err error) {
 		log.Println(err)
 		return ctx.Status(400).SendString(err.Error())
 	}
-	chunkedMessage := h.aiService.Chunking(message.Message)
-	ctx.Set("Transfer-Encoding", "chunked")
+	var audio = h.aiService.VertexAiTextToSpeech([]byte(message.Message))
+	return ctx.Status(200).Send(audio)
+	// chunkedMessage := h.aiService.Chunking(message.Message)
+	// ctx.Set("Transfer-Encoding", "chunked")
+	// ctx.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+	// 	var audio = h.aiService.VertexAiTextToSpeech([]byte(message.Message))
+	// 	_, err := w.Write(audio)
+	// 	if err != nil {
+	// 		print(err)
+	// 		return
+	// 	}
+	// 	_ = w.Flush()
+	// })
+	// return nil
+	// ctx.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+	// 	doneCh := make(chan bool)
 
-	ctx.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
-		doneCh := make(chan bool)
+	// 	for i := 0; i < len(chunkedMessage); i++ {
+	// 		go func(index int) {
+	// 			var audio []byte = h.aiService.VertexAiTextToSpeech(chunkedMessage[index])
+	// 			_, err := w.Write(audio)
+	// 			if err != nil {
+	// 				doneCh <- false
+	// 				log.Fatal(err)
+	// 				return
+	// 			}
+	// 			err = w.Flush()
+	// 			log.Println("Sending chunk")
+	// 			if err != nil {
+	// 				print(err)
+	// 				doneCh <- false
+	// 				return
+	// 			}
+	// 			doneCh <- true
+	// 		}(i)
 
-		for i := 0; i < len(chunkedMessage); i++ {
-			go func(index int) {
-				var audio []byte = h.aiService.VertexAiTextToSpeech(chunkedMessage[index])
-				_, err := w.Write(audio)
-				if err != nil {
-					doneCh <- false
-					log.Fatal(err)
-					return
-				}
-				err = w.Flush()
-				log.Println("Sending chunk")
-				if err != nil {
-					print(err)
-					doneCh <- false
-					return
-				}
-				doneCh <- true
-			}(i)
-
-			if !<-doneCh {
-				return
-			}
-		}
-	})
-	return nil
+	// 		if !<-doneCh {
+	// 			return
+	// 		}
+	// 	}
+	// })
+	// return nil
 }
 
 func (h *AiHandler) SpeechToText(c *fiber.Ctx) error {
 	log.Println("SpeechToText")
-	return h.aiService.VertexAiCreateTranscription(c)
+	return h.aiService.VertexAiSpeechToText(c)
 }
