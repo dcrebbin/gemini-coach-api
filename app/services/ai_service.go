@@ -15,6 +15,8 @@ import (
 	"cloud.google.com/go/vertexai/genai"
 	"google.golang.org/api/option"
 
+	texttospeech "cloud.google.com/go/texttospeech/apiv1"
+	"cloud.google.com/go/texttospeech/apiv1/texttospeechpb"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -64,41 +66,28 @@ func VertexAiGenerateMessage(c *fiber.Ctx, ai *ai_model.MessageReceived, role st
 }
 
 func (s *AiService) VertexAiTextToSpeech(message []byte) (output []byte) {
-	url := fmt.Sprintf("https://texttospeech.googleapis.com/v1/text:synthesize")
-	agent := fiber.Post(url)
-	apiKey := os.Getenv("GCLOUD_API_KEY")
-
-	agent.Set("Authorization", "Bearer "+apiKey)
-	agent.Set("Accept", "audio/mpeg")
-	agent.Set("Content-Type", "application/json; charset=utf-8")
-	agent.Set("x-goog-user-project", "up-it-aps")
-	vertexAudioRequest := ai_model.GoogleVertexAiRequest{
-		Input: ai_model.GoogleVertexAiAudioRequestInput{
-			Text: string(message),
+	ctx := context.Background()
+	credentialsLocation := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	client, _ := texttospeech.NewClient(ctx, option.WithCredentialsFile(credentialsLocation))
+	resp, err := client.SynthesizeSpeech(ctx, &texttospeechpb.SynthesizeSpeechRequest{
+		Input: &texttospeechpb.SynthesisInput{
+			InputSource: &texttospeechpb.SynthesisInput_Text{Text: string(message)},
 		},
-		Voice: ai_model.GoogleVertexAiAudioRequestVoice{
+		Voice: &texttospeechpb.VoiceSelectionParams{
 			LanguageCode: "en-AU",
 			Name:         "en-AU-Neural2-B",
 		},
-		AudioConfig: ai_model.GoogleVertexAiAudioRequestAudioConfig{
-			AudioEncoding: "MP3",
+		AudioConfig: &texttospeechpb.AudioConfig{
+			AudioEncoding: texttospeechpb.AudioEncoding_MP3,
 			SpeakingRate:  1.0,
 		},
-	}
+	})
 
-	agent.JSON(vertexAudioRequest)
-	_, body, _ := agent.Bytes()
-	vertexResponse := ai_model.GoogleVertexAiAudioResponse{}
-	err := json.Unmarshal(body, &vertexResponse)
 	if err != nil {
 		return nil
 	}
-	decodedBytes, err := base64.StdEncoding.DecodeString(vertexResponse.AudioContent)
-	if err != nil {
-		fmt.Println("Error decoding Base64 string:", err)
-		return
-	}
-	reader := io.NopCloser(bytes.NewReader(decodedBytes))
+
+	reader := io.NopCloser(bytes.NewReader(resp.AudioContent))
 	byteArray, _ := io.ReadAll(reader)
 	output = byteArray
 
