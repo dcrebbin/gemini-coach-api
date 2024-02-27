@@ -17,7 +17,10 @@ require (
 	gorm.io/gorm v1.25.5
 )
 
-require github.com/lib/pq v1.8.0 // indirect
+require (
+	cloud.google.com/go/texttospeech v1.7.5 // indirect
+	github.com/lib/pq v1.8.0 // indirect
+)
 
 require (
 	cloud.google.com/go v0.112.0 // indirect
