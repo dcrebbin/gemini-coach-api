@@ -3,11 +3,11 @@ package service
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	ai_model "gemini-coach-api/app/models/ai"
 	"io"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -15,6 +15,8 @@ import (
 	"cloud.google.com/go/vertexai/genai"
 	"google.golang.org/api/option"
 
+	speech "cloud.google.com/go/speech/apiv1"
+	"cloud.google.com/go/speech/apiv1/speechpb"
 	texttospeech "cloud.google.com/go/texttospeech/apiv1"
 	"cloud.google.com/go/texttospeech/apiv1/texttospeechpb"
 	"github.com/gofiber/fiber/v2"
@@ -110,59 +112,39 @@ func (s *AiService) Chunking(input string) (output [][]byte) {
 }
 
 func (s *AiService) VertexAiSpeechToText(c *fiber.Ctx) (err error) {
-	url := fmt.Sprintf(VertexTranscriptionEndpoint)
-	agent := fiber.Post(url)
-	apiKey := os.Getenv("GCLOUD_API_KEY")
-	agent.Set("Authorization", "Bearer "+apiKey)
-	agent.Set("Content-Type", "application/json; charset=utf-8")
-	agent.Set("x-goog-user-project", "up-it-aps") //replace with your project id
-
+	credentialsLocation := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	ctx := context.Background()
+	client, err := speech.NewClient(ctx, option.WithCredentialsFile(credentialsLocation))
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+	defer client.Close()
 	retrievedJson := c.Body()
 	var audio struct {
 		AudioData []byte `json:"audioData"`
 	}
-
 	if err := json.Unmarshal([]byte(retrievedJson), &audio); err != nil {
 		fmt.Println("Error parsing JSON:", err)
 		return nil
 	}
 
-	encodedString := base64.StdEncoding.EncodeToString(audio.AudioData)
+	resp, err := client.Recognize(ctx, &speechpb.RecognizeRequest{
+		Config: &speechpb.RecognitionConfig{
+			Encoding:        speechpb.RecognitionConfig_MP3,
+			SampleRateHertz: 16000,
+			LanguageCode:    "en-US",
+		},
+		Audio: &speechpb.RecognitionAudio{
+			AudioSource: &speechpb.RecognitionAudio_Content{
+				Content: []byte(audio.AudioData),
+			},
+		},
+	})
 	if err != nil {
-		fmt.Println("Error decoding Base64 string:", err)
-		return
+		log.Fatalf("failed to recognize: %v", err)
 	}
 
-	jsonBody := ai_model.GoogleVertexAiSpeechToTextRequest{
-		Config: ai_model.GoogleVertexAiSpeechToTextRequestConfig{
-			LanguageCode:          "en-AU",
-			EnableWordTimeOffsets: true,
-			EnableWordConfidence:  true,
-			Model:                 "default",
-			Encoding:              "MP3",
-			SampleRateHertz:       24000,
-			AudioChannelCount:     1,
-		},
-		Audio: ai_model.GoogleVertexAiSpeechToTextAudio{
-			Content: encodedString,
-		},
-	}
-	response := agent.JSON(jsonBody)
-	_, body, errs := response.Bytes()
-	if len(errs) > 0 {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"errs": errs,
-		})
-	}
-
-	var vertexResponse ai_model.GoogleVertexAiSpeechToTextResponse
-	err = json.Unmarshal(body, &vertexResponse)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"err": err,
-		})
-	}
 	return c.Status(200).JSON(fiber.Map{
-		"text": vertexResponse.VertexAiSpeechToTextResponseResults[0].Alternatives[0].Transcript,
+		"text": resp.Results[0].Alternatives[0].Transcript,
 	})
 }
