@@ -6,7 +6,7 @@ This API is for Gemini Coach made with [Go Fiber](https://docs.gofiber.io/)
 
 ### Text Generation
 
-- [Vertex (Palm, Gemini Pro etc)](https://console.cloud.google.com/vertex-ai/generative)
+- [Vertex (Palm2, Gemini Pro etc)](https://console.cloud.google.com/vertex-ai/generative)
 
 ### Text to Speech
 
@@ -18,34 +18,36 @@ This API is for Gemini Coach made with [Go Fiber](https://docs.gofiber.io/)
 
 ## Setup
 
-1. [Install GO](https://go.dev/doc/install)
+1. [Install Go](https://go.dev/doc/install)
 
-1. [Install gcloud CLI](https://cloud.google.com/sdk/docs/install)
+2. Create a gcloud project and enable VertexAi
 
-1. Create a gcloud project and enable a bunch of things, etc etc
+3. Create a .env using the env.example file
 
-1. Go get
+4. Navigate to `https://console.cloud.google.com/apis/credentials?authuser=1&project=` and create a service account and give it access to the VertexAi role via Google IAM
 
-1. Create a .env using the env.example file
+5. Download those credentials and store in `/authentication/*your credentials*.json`
+
+6. go get
+
+7. go run main.go
+
+## Deploy to production
+
+1. head to https://console.cloud.google.com/run?hl=en&project=*your project*
+
+2. Create service > Continuously deploy from a repository (Github) > Set up with cloud build > Install & enable G Cloud Build for your repo > build type "Dockerfile" > Save
+
+3. Click into your service > Edit & Deploy New Revision > Variables & Secrets > Enter your variables & Secrets
+
+4. Deploy
+
+
+_Secret Manager Not fully implemented_
+
 
 ## Swagger
 
-_Not fully implemented_
+_Not implemented_
 
 http://127.0.0.1:8080/swagger/index.html
-
-## Authentication
-
-This allows you to deploy to gcp
-
-> gcloud auth login
-
-Need to use auth quickly to use vertex ai?
-
-> gcloud auth print-access-token
-
-## Deploy
-
-(make sure to be within the root directory ./)
-
-> gcloud run deploy --source .
