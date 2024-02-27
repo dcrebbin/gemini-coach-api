@@ -6,7 +6,7 @@ WORKDIR /app
 COPY . ./
 
 # Build the binary.
-RUN CGO_ENABLED=0 GOOS=linux go build -v -o server cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -v -o server main.go
 
 # Use the official Alpine image for a lean production container.
 FROM alpine:3.14
