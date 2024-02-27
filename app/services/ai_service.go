@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -11,85 +12,55 @@ import (
 	"regexp"
 	"strings"
 
+	"cloud.google.com/go/vertexai/genai"
+	"google.golang.org/api/option"
+
 	"github.com/gofiber/fiber/v2"
 )
 
 const (
 	VertexTranscriptionEndpoint  = "https://speech.googleapis.com/v1p1beta1/speech:recognize"
 	VertexTextGenerationEndpoint = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s"
+	VertexModelName              = "gemini-1.0-pro-001"
+	Region                       = "us-central1"
 )
 
 type AiService struct {
 }
 
 func (s *AiService) AiCreateMessage(c *fiber.Ctx, ai *ai_model.MessageReceived) (err error) {
-	return VertexAiGenerateMessage(c, ai, "gemini-pro", "User")
+	return VertexAiGenerateMessage(c, ai, "User")
 }
 
-func VertexAiGenerateMessage(c *fiber.Ctx, ai *ai_model.MessageReceived, llmModel string, role string) (err error) {
-	jsonBody := ai_model.GoogleRequest{
-		Contents: []ai_model.GoogleRequestContent{
-			{
-				Parts: []ai_model.GoogleRequestPart{
-					{
-						Text: role + " " + ai.Message,
-					},
-				},
-			},
-		},
-		SafetySettings: []ai_model.GoogleRequestSafety{
-			{
-				Category:  "HARM_CATEGORY_DANGEROUS_CONTENT",
-				Threshold: "BLOCK_ONLY_HIGH",
-			},
-		},
-		GenerationConfig: ai_model.GoogleGenerationConfig{
-			Temperature:     1.0,
-			TopP:            0.8,
-			TopK:            10,
-			MaxOutputTokens: 125,
-		},
-	}
-	apiKey := os.Getenv("VERTEX_AI_API_KEY") //using the old gen ai maker method
-	url := fmt.Sprintf(VertexTextGenerationEndpoint, llmModel, apiKey)
-	agent := fiber.Post(url)
-	agent.Set("Content-Type", "application/json")
-	agent.JSON(jsonBody)
-	statusCode, body, errs := agent.Bytes()
-	if len(errs) > 0 {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"errs": errs,
-		})
-	}
-	if statusCode == 400 {
-		return c.Status(fiber.StatusUnauthorized).JSON(body)
-	}
-	if statusCode == 401 {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"message": "Unauthorized",
-		})
-	}
-
-	var googleResponse ai_model.GoogleResponse
-	err = json.Unmarshal(body, &googleResponse)
+func VertexAiGenerateMessage(c *fiber.Ctx, ai *ai_model.MessageReceived, role string) (err error) {
+	ctx := context.Background()
+	credentialsLocation := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	projectID := os.Getenv("GOOGLE_PROJECT_ID")
+	client, err := genai.NewClient(ctx, projectID, Region, option.WithCredentialsFile(credentialsLocation))
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"err": err,
-		})
+		return fmt.Errorf("error creating client: %v", err)
+	}
+	defer client.Close()
+
+	gemini := client.GenerativeModel(VertexModelName)
+	chat := gemini.StartChat()
+
+	r, err := chat.SendMessage(
+		ctx,
+		genai.Text(role+" "+ai.Message))
+	if err != nil {
+		return err
 	}
 
-	transformedData := TransformGoogleData(googleResponse)
+	part := r.Candidates[0].Content.Parts[0]
+	json, err := json.Marshal(part)
+	message := string(json)
+	message = strings.Replace(message, "\"", "", -1)
 
-	return c.Status(statusCode).JSON(fiber.Map{
-		"message": transformedData.MessageRetrieved,
+	return c.Status(200).JSON(fiber.Map{
+		"message": message,
 		"status":  "success",
 	})
-}
-
-func TransformGoogleData(responseReceived ai_model.GoogleResponse) ai_model.Response {
-	return ai_model.Response{
-		MessageRetrieved: responseReceived.Candidates[0].Content.Parts[0].Text,
-	}
 }
 
 func (s *AiService) VertexAiTextToSpeech(message []byte) (output []byte) {
