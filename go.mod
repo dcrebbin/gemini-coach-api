@@ -18,6 +18,7 @@ require (
 )
 
 require (
+	cloud.google.com/go/speech v1.22.0 // indirect
 	cloud.google.com/go/texttospeech v1.7.5 // indirect
 	github.com/lib/pq v1.8.0 // indirect
 )
