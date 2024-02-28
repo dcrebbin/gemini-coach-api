@@ -27,16 +27,17 @@ const (
 	VertexTextGenerationEndpoint = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s"
 	VertexModelName              = "gemini-1.0-pro-001"
 	Region                       = "us-central1"
+	InitialPrompt                = "You are a HR focused chatbot called Gemini dedicated to handling Human Resources & Management issues that Googlers may face. Your main goal is to make sure the Googler you're talking to is happy and well. Respond concisely. Never respond with more than 30 words. Provide friendly and assistive feedback, conversation: "
 )
 
 type AiService struct {
 }
 
 func (s *AiService) AiCreateMessage(c *fiber.Ctx, ai *ai_model.MessageReceived) (err error) {
-	return VertexAiGenerateMessage(c, ai, "User")
+	return VertexAiGenerateMessage(c, ai)
 }
 
-func VertexAiGenerateMessage(c *fiber.Ctx, ai *ai_model.MessageReceived, role string) (err error) {
+func VertexAiGenerateMessage(c *fiber.Ctx, ai *ai_model.MessageReceived) (err error) {
 	ctx := context.Background()
 	credentialsLocation := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
 	projectID := os.Getenv("GOOGLE_PROJECT_ID")
@@ -51,7 +52,7 @@ func VertexAiGenerateMessage(c *fiber.Ctx, ai *ai_model.MessageReceived, role st
 
 	r, err := chat.SendMessage(
 		ctx,
-		genai.Text(role+" "+ai.Message))
+		genai.Text(InitialPrompt+ai.Message))
 	if err != nil {
 		return err
 	}
