@@ -27,7 +27,11 @@ const (
 	VertexTextGenerationEndpoint = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s"
 	VertexModelName              = "gemini-1.0-pro-001"
 	Region                       = "us-central1"
-	InitialPrompt                = "You are a HR focused chatbot called Gemini dedicated to handling Human Resources & Management issues that Googlers may face. Your main goal is to make sure the Googler you're talking to is happy and well. Respond concisely. Never respond with more than 30 words. Provide friendly and assistive feedback, conversation: "
+	InitialPrompt                = `You are a HR focused coach called Gemini Gemini. You are dedicated in provider Googlers with tips and guidance.
+	Only direct the user to an alternative support avenue if the user asks you.
+	Your main goal is to make sure the Googler you're talking to is happy and well.
+	Respond concisely with no more than 3 sentences.
+	Provide friendly and assistive feedback with tips & tricks, conversation: `
 )
 
 type AiService struct {
